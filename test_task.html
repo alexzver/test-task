@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+
+        }
+
+        td {
+            border: 2px solid black;
+        }
+
+        .loader {
+            border: 16px solid #f3f3f3;
+            /* Light grey */
+            border-top: 16px solid #3498db;
+            /* Blue */
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 2s linear infinite;
+            left: 50%;
+            top: 50%;
+            position: absolute;
+        }
+
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+
+
+</head>
+
+<body>
+    <div class="loader"></div>
+
+    <table style="width:100%">
+        <tr>
+            <th>Наименование</th>
+            <th>Описание</th>
+            <th>Год выпуска</th>
+            <th>Кошки</th>
+        </tr>
+
+    </table>
+    <script>
+        
+        //инициализируем массив для deferred объектов, которые возвращает каждый $.ajax запрос
+        var deferreds = [];
+
+        deferreds.push($.ajax({
+            url: "https://ghibliapi.herokuapp.com/films",
+            type: 'GET',
+            dataType: 'json',
+            contentType: 'application/json',
+            processData: false,
+            success: function (data) {
+                var items = [];
+                $.each(data, function (i, val) {
+                    items.push("<tr id='" + data[i]['id'] + "'>");
+                    $.each(data[i], function (key, val) {
+                        if ((key == 'title') || (key == 'description') || (key == 'release_date')) {
+                            items.push("<td id='" + key + "'>" + val + "</td>");
+                        }
+                    });
+                    items.push("<td><ul></ul></td>");
+                    items.push("</tr>");
+
+                });
+                $("table").append(items.join(""))
+
+            },
+            error: function () {
+                alert("Cannot get data");
+            }
+        }));
+
+        deferreds.push($.ajax({
+            url: "https://ghibliapi.herokuapp.com/species/603428ba-8a86-4b0b-a9f1-65df6abef3d3",
+            type: 'GET',
+            dataType: 'json',
+            contentType: 'application/json',
+            processData: false,
+            success: function (data) {
+                $.each(data['people'], function (i, val) {
+                    deferreds.push($.ajax({
+                        url: val,
+                        type: 'GET',
+                        dataType: 'json',
+                        contentType: 'application/json',
+                        processData: false,
+                        success: function (data) {
+                            $.each(data['films'], function (i, val) {
+                                var path = val.split('/');
+                                var id = path[path.length - 1];
+                                $('#' + id + ' td:last-child ul').append("<li>" + data['name'] + "</li>");
+
+                            });
+                        },
+                        error: function () {
+                            alert("Cannot get data");
+                        }
+                    }));
+
+                });
+                //когда все deferred объекты от ajax запросов зарезолвлены, скрываем loader
+                $.when.apply($, deferreds).then(function () {
+                    $(".loader").css("display", "none");
+                });
+
+            },
+            error: function () {
+                alert("Cannot get data");
+            }
+        }));
+
+
+
+
+
+
+
+
+
+
+
+    </script>
+
+</body>
+
+</html>
